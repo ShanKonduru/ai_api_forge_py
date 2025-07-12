@@ -1,0 +1,53 @@
+from datetime import datetime
+from app.extensions.db import db
+
+
+class {{ class_name }}(db.Model):
+    """{{ class_name }} model"""
+    
+    __tablename__ = '{{ table_name }}'
+    
+{% for field in fields -%}
+{% if field.get('primary_key') -%}
+    {{ field.name }} = db.Column({{ field.type }}, primary_key=True, autoincrement=True)
+{% elif field.get('default') -%}
+    {{ field.name }} = db.Column({{ field.type }}{% if field.required %}, nullable=False{% endif %}, default={{ field.default }})
+{% else -%}
+    {{ field.name }} = db.Column({{ field.type }}{% if field.required %}, nullable=False{% endif %})
+{% endif -%}
+{% endfor %}
+    def __init__(self, **kwargs):
+        """Initialize {{ class_name }} instance"""
+        super({{ class_name }}, self).__init__(**kwargs)
+    
+    def __repr__(self):
+        return f'<{{ class_name }} {self.id}>'
+    
+    def to_dict(self):
+        """Convert model instance to dictionary"""
+        return {
+{% for field in fields -%}
+            '{{ field.name }}': getattr(self, '{{ field.name }}', None),
+{% endfor -%}
+        }
+    
+    @classmethod
+    def create(cls, **kwargs):
+        """Create new {{ class_name }} instance"""
+        instance = cls(**kwargs)
+        db.session.add(instance)
+        db.session.commit()
+        return instance
+    
+    def update(self, **kwargs):
+        """Update {{ class_name }} instance"""
+        for key, value in kwargs.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
+        db.session.commit()
+        return self
+    
+    def delete(self):
+        """Delete {{ class_name }} instance"""
+        db.session.delete(self)
+        db.session.commit()

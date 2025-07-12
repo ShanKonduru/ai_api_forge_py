@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="150" height="150" viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="75" cy="75" r="75" fill="#4A90E2"/>
+  
+  <!-- Developer icon -->
+  <g transform="translate(75, 75)">
+    <!-- Head -->
+    <circle cx="0" cy="-20" r="15" fill="white"/>
+    
+    <!-- Body -->
+    <rect x="-12" y="-5" width="24" height="30" rx="3" fill="white"/>
+    
+    <!-- Arms -->
+    <rect x="-20" y="0" width="8" height="20" rx="2" fill="white"/>
+    <rect x="12" y="0" width="8" height="20" rx="2" fill="white"/>
+    
+    <!-- Code symbols -->
+    <text x="-8" y="8" font-family="monospace" font-size="8" fill="#4A90E2">&lt;/&gt;</text>
+    
+    <!-- Laptop -->
+    <rect x="-15" y="25" width="30" height="15" rx="2" fill="#333"/>
+    <rect x="-13" y="27" width="26" height="10" rx="1" fill="#000"/>
+    
+    <!-- Code lines on laptop -->
+    <line x1="-10" y1="30" x2="-2" y2="30" stroke="#00FF00" stroke-width="0.5"/>
+    <line x1="-10" y1="32" x2="8" y2="32" stroke="#00FF00" stroke-width="0.5"/>
+    <line x1="-10" y1="34" x2="5" y2="34" stroke="#00FF00" stroke-width="0.5"/>
+  </g>
+  
+  <!-- Decorative code elements around -->
+  <text x="20" y="30" font-family="monospace" font-size="10" fill="white" opacity="0.7">def</text>
+  <text x="110" y="40" font-family="monospace" font-size="10" fill="white" opacity="0.7">{}</text>
+  <text x="25" y="120" font-family="monospace" font-size="10" fill="white" opacity="0.7">API</text>
+  <text x="105" y="130" font-family="monospace" font-size="10" fill="white" opacity="0.7">Flask</text>
+</svg>

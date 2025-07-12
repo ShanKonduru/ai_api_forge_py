@@ -1,0 +1,33 @@
+"""
+Custom exceptions for {{ api_name }} API client
+"""
+
+
+class APIException(Exception):
+    """Base exception for API errors"""
+    pass
+
+
+class AuthenticationError(APIException):
+    """Raised when authentication fails"""
+    pass
+
+
+class NotFoundError(APIException):
+    """Raised when a resource is not found"""
+    pass
+
+
+class ValidationError(APIException):
+    """Raised when request validation fails"""
+    pass
+
+
+class RateLimitError(APIException):
+    """Raised when rate limit is exceeded"""
+    pass
+
+
+class ServerError(APIException):
+    """Raised when server returns 5xx errors"""
+    pass

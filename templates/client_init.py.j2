@@ -1,0 +1,41 @@
+"""
+{{ api_name | title }} Python API Client
+"""
+
+from .base_client import BaseClient
+{% for resource_name in resources.keys() %}
+from .{{ resource_name }}_client import {{ resource_name | to_pascal_case }}Client
+{% endfor %}
+from .exceptions import (
+    APIException,
+    AuthenticationError,
+    NotFoundError,
+    ValidationError,
+    RateLimitError,
+    ServerError
+)
+
+__version__ = "1.0.0"
+__all__ = [
+    "BaseClient",
+    {% for resource_name in resources.keys() %}"{{ resource_name | to_pascal_case }}Client",
+    {% endfor %}"APIException",
+    "AuthenticationError", 
+    "NotFoundError",
+    "ValidationError",
+    "RateLimitError",
+    "ServerError"
+]
+
+
+class {{ api_name | to_pascal_case }}Client(BaseClient):
+    """Main API client with all resource clients"""
+    
+    def __init__(self, *args, **kwargs):
+        """Initialize the main API client"""
+        super().__init__(*args, **kwargs)
+        
+        # Initialize resource clients
+        {% for resource_name in resources.keys() %}
+        self.{{ resource_name }} = {{ resource_name | to_pascal_case }}Client(*args, **kwargs)
+        {% endfor %}

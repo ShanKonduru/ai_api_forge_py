@@ -1,0 +1,99 @@
+"""
+{{ class_name }} API client for {{ api_name }}
+"""
+from typing import Dict, Any, List, Optional
+from .base_client import BaseClient
+
+
+class {{ class_name }}Client(BaseClient):
+    """Client for {{ resource_name }} resource operations"""
+    
+    def __init__(self, *args, **kwargs):
+        """Initialize {{ class_name }} client"""
+        super().__init__(*args, **kwargs)
+        self.resource_path = "{{ resource_data.uri }}"
+    
+    {% for method in resource_data.methods %}
+    def {{ method.method.lower() }}{% if method.method == 'GET' and '{' in resource_data.uri %}_by_id{% endif %}(
+        self,
+        {% for param in resource_data.path_params -%}
+        {{ param }}: {% if param.endswith('_id') %}int{% else %}str{% endif %},
+        {% endfor -%}
+        {% if method.query_params -%}
+        {% for param_name, param_info in method.query_params.items() -%}
+        {{ param_name | to_snake_case }}: Optional[{% if param_info.type == 'integer' %}int{% elif param_info.type == 'boolean' %}bool{% else %}str{% endif %}] = None,
+        {% endfor -%}
+        {% endif -%}
+        {% if method.body -%}
+        data: Optional[Dict[str, Any]] = None,
+        {% endif -%}
+        **kwargs
+    ) -> {% if method.method == 'DELETE' %}bool{% else %}Dict[str, Any]{% endif %}:
+        """
+        {{ method.description or method.method + ' ' + resource_name }}
+        
+        {% if resource_data.path_params -%}
+        Args:
+            {% for param in resource_data.path_params -%}
+            {{ param }}: {{ param.replace('_', ' ').title() }}
+            {% endfor -%}
+        {% endif -%}
+        {% if method.query_params -%}
+        {% for param_name, param_info in method.query_params.items() -%}
+            {{ param_name | to_snake_case }}: {{ param_info.description or param_name }}
+            {% endfor -%}
+        {% endif -%}
+        {% if method.body -%}
+            data: Request body data
+            {% endif -%}
+        Returns:
+            {% if method.method == 'DELETE' %}True if successful{% else %}API response data{% endif %}
+        """
+        # Build the endpoint URL
+        endpoint = self.resource_path
+        {% for param in resource_data.path_params %}
+        endpoint = endpoint.replace('{' + '{{ param.replace('_', '-') }}' + '}', str({{ param }}))
+        {% endfor %}
+        
+        {% if method.query_params %}
+        # Build query parameters
+        params = {}
+        {% for param_name, param_info in method.query_params.items() %}
+        if {{ param_name | to_snake_case }} is not None:
+            params['{{ param_name }}'] = {{ param_name | to_snake_case }}
+        {% endfor %}
+        kwargs['params'] = params
+        {% endif %}
+        
+        {% if method.method == 'GET' %}
+        return self.get(endpoint, **kwargs)
+        {% elif method.method == 'POST' %}
+        return self.post(endpoint, data=data, **kwargs)
+        {% elif method.method == 'PUT' %}
+        return self.put(endpoint, data=data, **kwargs)
+        {% elif method.method == 'PATCH' %}
+        return self.patch(endpoint, data=data, **kwargs)
+        {% elif method.method == 'DELETE' %}
+        self.delete(endpoint, **kwargs)
+        return True
+        {% endif %}
+    
+    {% endfor %}
+    {% if not resource_data.methods or not any(m.method == 'GET' for m in resource_data.methods) %}
+    def list(self, **kwargs) -> List[Dict[str, Any]]:
+        """List all {{ resource_name }}s"""
+        response = self.get("{{ resource_data.uri.split('{')[0].rstrip('/') }}", **kwargs)
+        return response.get('items', response.get('data', [response] if isinstance(response, list) else []))
+    {% endif %}
+    
+    {% if '{' in resource_data.uri and not any(m.method == 'GET' and '{' in resource_data.uri for m in resource_data.methods) %}
+    def get_by_id(self, {% for param in resource_data.path_params -%}
+{{ param }}: {% if param.endswith('_id') %}int{% else %}str{% endif %}{% if not loop.last %}, {% endif -%}
+{% endfor %}) -> Dict[str, Any]:
+        """Get {{ resource_name }} by ID"""
+        endpoint = self.resource_path
+        {% for param in resource_data.path_params %}
+        endpoint = endpoint.replace('{' + '{{ param.replace('_', '-') }}' + '}', str({{ param }}))
+        {% endfor %}
+        return self.get(endpoint)
+    {% endif %}

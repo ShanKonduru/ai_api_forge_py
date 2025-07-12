@@ -1,0 +1,147 @@
+# {{ api_name | title }} Python Client
+
+A Python client library for the {{ api_name | title }} API with comprehensive pytest test suite.
+
+## Installation
+
+```bash
+pip install {{ api_name.replace('_', '-') }}
+```
+
+## Quick Start
+
+```python
+from {{ api_name }} import {{ api_name | to_pascal_case }}Client
+
+# Initialize the client
+{% if include_auth %}
+client = {{ api_name | to_pascal_case }}Client(
+    base_url="https://api.example.com",
+    api_key="your-api-key"
+)
+{% else %}
+client = {{ api_name | to_pascal_case }}Client(base_url="https://api.example.com")
+{% endif %}
+
+# Use individual resource clients
+{% for resource_name in resources.keys() %}
+{{ resource_name }}_data = client.{{ resource_name }}.list()
+{% endfor %}
+```
+
+## Features
+
+- **Type hints**: Full type annotation support
+- **Error handling**: Comprehensive exception handling
+- **Authentication**: {% if include_auth %}Built-in support for API key and basic authentication{% else %}Ready for custom authentication{% endif %}
+- **Testing**: Complete pytest test suite with mocking
+- **Documentation**: Detailed docstrings and examples
+
+## API Resources
+
+{% for resource_name, resource_data in resources.items() %}
+### {{ resource_name | title }}
+
+```python
+# {{ resource_name | title }} operations
+{% for method in resource_data.methods %}
+{% if method.method == 'GET' and '{' in resource_data.uri %}
+{{ resource_name }} = client.{{ resource_name }}.get_by_id({{ resource_data.path_params[0] }}=1)
+{% elif method.method == 'GET' %}
+{{ resource_name }}_list = client.{{ resource_name }}.{{ method.method.lower() }}()
+{% elif method.method == 'POST' %}
+new_{{ resource_name }} = client.{{ resource_name }}.{{ method.method.lower() }}(data={"name": "example"})
+{% elif method.method == 'PUT' %}
+updated_{{ resource_name }} = client.{{ resource_name }}.{{ method.method.lower() }}({{ resource_data.path_params[0] if resource_data.path_params else 'id' }}=1, data={"name": "updated"})
+{% elif method.method == 'DELETE' %}
+client.{{ resource_name }}.{{ method.method.lower() }}({{ resource_data.path_params[0] if resource_data.path_params else 'id' }}=1)
+{% endif %}
+{% endfor %}
+```
+
+{% endfor %}
+
+## Development
+
+### Setup
+
+```bash
+git clone https://github.com/example/{{ api_name }}
+cd {{ api_name }}
+pip install -r requirements-dev.txt
+```
+
+### Running Tests
+
+```bash
+# Run all tests
+pytest
+
+# Run with coverage
+pytest --cov={{ api_name }}
+
+# Run only unit tests (exclude integration tests)
+pytest -m "not integration"
+
+# Run specific test file
+pytest tests/test_{{ resources.keys()|list|first }}.py
+```
+
+### Code Quality
+
+```bash
+# Format code
+black {{ api_name }}/ tests/
+
+# Lint code
+flake8 {{ api_name }}/ tests/
+
+# Type checking
+mypy {{ api_name }}/
+```
+
+## Error Handling
+
+The client includes comprehensive error handling:
+
+```python
+from {{ api_name }}.exceptions import APIException, AuthenticationError, NotFoundError
+
+try:
+    data = client.{{ resources.keys()|list|first }}.get_by_id(999)
+except NotFoundError:
+    print("Resource not found")
+except AuthenticationError:
+    print("Authentication failed")
+except APIException as e:
+    print(f"API error: {e}")
+```
+
+## Configuration
+
+You can configure the client behavior:
+
+```python
+client = {{ api_name | to_pascal_case }}Client(
+    base_url="https://api.example.com",
+    {% if include_auth %}api_key="your-api-key",{% endif %}
+    timeout=30,  # Request timeout in seconds
+)
+
+# Check API health
+if client.health_check():
+    print("API is accessible")
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests for new functionality
+5. Run the test suite
+6. Submit a pull request
+
+## License
+
+MIT License - see LICENSE file for details.

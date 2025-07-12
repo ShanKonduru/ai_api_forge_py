@@ -1,0 +1,88 @@
+"""
+Tests for {{ class_name }} API client
+"""
+import pytest
+import responses
+from {{ api_name }} import {{ class_name }}Client
+
+
+class Test{{ class_name }}:
+    """Test suite for {{ class_name }}Client"""
+    
+    def setup_method(self):
+        """Set up test fixtures"""
+        self.client = {{ class_name }}Client(base_url="https://api.test.com")
+        self.sample_data = {
+            "id": 1,
+            "name": "Test {{ resource_name }}",
+            "created_at": "2023-01-01T00:00:00Z"
+        }
+    
+    {% for method in resource_data.methods %}
+    @responses.activate
+    def test_{{ method.method.lower() }}{% if method.method == 'GET' and '{' in resource_data.uri %}_by_id{% endif %}(self):
+        """Test {{ method.method }} {{ resource_name }}"""
+        # Mock the API response
+        {% if method.method == 'DELETE' %}
+        responses.add(
+            responses.{{ method.method }},
+            "https://api.test.com{{ resource_data.uri }}".replace(
+                {% for param in resource_data.path_params %}"{{'{'}}{{ param.replace('_', '-') }}{{'}'}}",{% if not loop.last %} "1").replace({% else %} "1"{% endif %}
+                {% endfor %}),
+            status=204
+        )
+        {% else %}
+        responses.add(
+            responses.{{ method.method }},
+            "https://api.test.com{{ resource_data.uri }}".replace(
+                {% for param in resource_data.path_params %}"{{'{'}}{{ param.replace('_', '-') }}{{'}'}}",{% if not loop.last %} "1").replace({% else %} "1"{% endif %}
+                {% endfor %}),
+            json=self.sample_data,
+            status=200
+        )
+        {% endif %}
+        
+        # Make the request
+        {% if method.method == 'DELETE' %}
+        result = self.client.{{ method.method.lower() }}{% if method.method == 'GET' and '{' in resource_data.uri %}_by_id{% endif %}(
+            {% for param in resource_data.path_params %}{{ param }}=1{% if not loop.last %}, {% endif %}{% endfor %}
+        )
+        assert result is True
+        {% else %}
+        result = self.client.{{ method.method.lower() }}{% if method.method == 'GET' and '{' in resource_data.uri %}_by_id{% endif %}(
+            {% for param in resource_data.path_params %}{{ param }}=1{% if not loop.last %}, {% endif %}{% endfor %}{% if method.body %}, data=self.sample_data{% endif %}
+        )
+        assert result == self.sample_data
+        {% endif %}
+    
+    {% endfor %}
+    @responses.activate
+    def test_{{ method.method.lower() }}{% if method.method == 'GET' and '{' in resource_data.uri %}_by_id{% endif %}_error_handling(self):
+        """Test error handling for {{ method.method }} {{ resource_name }}"""
+        # Mock error response
+        responses.add(
+            responses.{{ resource_data.methods[0].method }},
+            "https://api.test.com{{ resource_data.uri }}".replace(
+                {% for param in resource_data.path_params %}"{{'{'}}{{ param.replace('_', '-') }}{{'}'}}",{% if not loop.last %} "1").replace({% else %} "1"{% endif %}
+                {% endfor %}),
+            json={"error": "Not found"},
+            status=404
+        )
+        
+        # Test that exception is raised
+        from {{ api_name }}.exceptions import NotFoundError
+        with pytest.raises(NotFoundError):
+            self.client.{{ resource_data.methods[0].method.lower() }}{% if resource_data.methods[0].method == 'GET' and '{' in resource_data.uri %}_by_id{% endif %}(
+                {% for param in resource_data.path_params %}{{ param }}=1{% if not loop.last %}, {% endif %}{% endfor %}
+            )
+    
+    {% if resource_data.methods %}
+    def test_authentication_required(self):
+        """Test that authentication is handled correctly"""
+        # This would depend on your specific auth implementation
+        client_with_auth = {{ class_name }}Client(
+            base_url="https://api.test.com",
+            api_key="test-key"
+        )
+        assert "Authorization" in client_with_auth.session.headers
+    {% endif %}

@@ -1,0 +1,125 @@
+"""
+Integration tests for {{ api_name }} API client
+"""
+import pytest
+import os
+from {{ api_name }} import {{ api_name | to_pascal_case }}Client
+
+
+@pytest.mark.integration
+class TestIntegration:
+    """Integration test suite for {{ api_name }} API"""
+    
+    def setup_method(self):
+        """Set up integration test fixtures"""
+        self.client = {{ api_name | to_pascal_case }}Client(
+            base_url=os.getenv("API_BASE_URL", "https://api.test.com"),
+            api_key=os.getenv("API_KEY", "test-key")
+        )
+    
+    @pytest.mark.slow
+    def test_api_health_check(self):
+        """Test API health check endpoint"""
+        assert self.client.health_check() is True
+    
+    {% for resource_name, resource_data in resources.items() %}
+    @pytest.mark.integration
+    def test_{{ resource_name }}_workflow(self):
+        """Test complete {{ resource_name }} workflow"""
+        {% if any(m.method == 'POST' for m in resource_data.methods) %}
+        # Create {{ resource_name }}
+        new_data = {
+            "name": f"Integration Test {{ resource_name | title }}",
+            "description": "Created during integration test"
+        }
+        
+        {% for method in resource_data.methods %}
+        {% if method.method == 'POST' %}
+        created = self.client.{{ resource_name }}.{{ method.method.lower() }}(data=new_data)
+        assert created is not None
+        assert 'id' in created or 'name' in created
+        
+        {% elif method.method == 'GET' and '{' in resource_data.uri %}
+        # Get by ID
+        if 'id' in created:
+            retrieved = self.client.{{ resource_name }}.get_by_id({{ resource_data.path_params[0] }}=created['id'])
+            assert retrieved is not None
+        
+        {% elif method.method == 'PUT' and resource_data.path_params %}
+        # Update
+        if 'id' in created:
+            update_data = new_data.copy()
+            update_data['name'] = f"Updated {new_data['name']}"
+            updated = self.client.{{ resource_name }}.{{ method.method.lower() }}(
+                {{ resource_data.path_params[0] }}=created['id'], 
+                data=update_data
+            )
+            assert updated is not None
+        
+        {% endif %}
+        {% endfor %}
+        {% else %}
+        # Test listing {{ resource_name }}s
+        {% for method in resource_data.methods %}
+        {% if method.method == 'GET' and not '{' in resource_data.uri %}
+        {{ resource_name }}_list = self.client.{{ resource_name }}.{{ method.method.lower() }}()
+        assert isinstance({{ resource_name }}_list, (list, dict))
+        {% elif method.method == 'GET' and '{' in resource_data.uri %}
+        # Test getting by ID (using a test ID)
+        try:
+            test_item = self.client.{{ resource_name }}.get_by_id({{ resource_data.path_params[0] }}=1)
+            assert test_item is not None
+        except Exception:
+            # Expected if test ID doesn't exist
+            pass
+        {% endif %}
+        {% endfor %}
+        {% endif %}
+    
+    {% endfor %}
+    
+    @pytest.mark.integration
+    def test_error_handling_integration(self):
+        """Test error handling in real environment"""
+        from {{ api_name }}.exceptions import NotFoundError
+        
+        {% if resources %}
+        # Test 404 error
+        with pytest.raises(NotFoundError):
+            {% for resource_name, resource_data in resources.items() %}
+            {% if any('{' in r.uri for r in resources.values()) %}
+            self.client.{{ resource_name }}.get_by_id({{ resource_data.path_params[0] if resource_data.path_params else 'id' }}=999999)
+            break
+            {% endif %}
+            {% endfor %}
+        {% endif %}
+    
+    @pytest.mark.integration
+    @pytest.mark.slow
+    def test_concurrent_requests(self):
+        """Test concurrent API requests"""
+        import concurrent.futures
+        import threading
+        
+        def make_request():
+            """Make a test API request"""
+            return self.client.health_check()
+        
+        # Test multiple concurrent requests
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            futures = [executor.submit(make_request) for _ in range(10)]
+            results = [future.result() for future in concurrent.futures.as_completed(futures)]
+        
+        # All health checks should succeed
+        assert all(results)
+    
+    def test_session_reuse(self):
+        """Test that sessions are properly reused"""
+        # Make multiple requests to ensure session is reused
+        for _ in range(3):
+            result = self.client.health_check()
+            assert isinstance(result, bool)
+        
+        # Verify session headers are maintained
+        assert 'Authorization' in self.client.session.headers
+        assert 'User-Agent' in self.client.session.headers

@@ -1,0 +1,15 @@
+from flask import Blueprint
+
+# Create API blueprint
+bp = Blueprint('api', __name__)
+
+# Import and register resource blueprints
+{% for resource in resources -%}
+from app.api.{{ api_version }}.{{ resource }} import {{ resource }}_bp
+bp.register_blueprint({{ resource }}_bp)
+{% endfor %}
+
+@bp.route('/health')
+def health_check():
+    """Health check endpoint"""
+    return {'status': 'healthy', 'version': '{{ api_version }}'}, 200

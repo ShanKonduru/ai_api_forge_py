@@ -1,0 +1,59 @@
+"""
+Test configuration and fixtures for {{ api_name }} tests
+"""
+import pytest
+import os
+from {{ api_name }} import {{ api_name | to_pascal_case }}Client
+
+
+@pytest.fixture
+def api_client():
+    """Create a test API client"""
+    return {{ api_name | to_pascal_case }}Client(
+        base_url=os.getenv("TEST_API_BASE_URL", "https://api.test.com"),
+        {% if include_auth %}api_key=os.getenv("TEST_API_KEY", "test-key"){% endif %}
+    )
+
+
+@pytest.fixture
+def sample_data():
+    """Sample data for testing"""
+    return {
+        "id": 1,
+        "name": "Test Item",
+        "description": "A test item for API testing",
+        "created_at": "2023-01-01T00:00:00Z",
+        "updated_at": "2023-01-01T00:00:00Z"
+    }
+
+
+@pytest.fixture
+def auth_headers():
+    """Authentication headers for testing"""
+    {% if include_auth %}
+    return {
+        "Authorization": f"Bearer {os.getenv('TEST_API_KEY', 'test-key')}"
+    }
+    {% else %}
+    return {}
+    {% endif %}
+
+
+@pytest.fixture(scope="session")
+def vcr_config():
+    """Configuration for VCR.py (for recording HTTP interactions)"""
+    return {
+        "filter_headers": ["authorization", "x-api-key"],
+        "record_mode": "once",
+        "match_on": ["uri", "method"],
+    }
+
+
+def pytest_configure(config):
+    """Configure pytest with custom markers"""
+    config.addinivalue_line(
+        "markers", "integration: marks tests as integration tests"
+    )
+    config.addinivalue_line(
+        "markers", "slow: marks tests as slow running"
+    )

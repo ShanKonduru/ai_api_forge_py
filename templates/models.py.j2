@@ -1,0 +1,73 @@
+"""
+Data models for {{ api_name }}
+"""
+from typing import Dict, Any, Optional, List
+from datetime import datetime
+import json
+
+
+class BaseModel:
+    """Base model class with common functionality"""
+    
+    def __init__(self, data: Dict[str, Any]):
+        """Initialize model from API response data"""
+        self._data = data
+    
+    def __getattr__(self, name: str) -> Any:
+        """Allow attribute-style access to data"""
+        if name in self._data:
+            return self._data[name]
+        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
+    
+    def __getitem__(self, key: str) -> Any:
+        """Allow dictionary-style access to data"""
+        return self._data[key]
+    
+    def get(self, key: str, default: Any = None) -> Any:
+        """Get value with default"""
+        return self._data.get(key, default)
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary"""
+        return self._data.copy()
+    
+    def to_json(self) -> str:
+        """Convert to JSON string"""
+        return json.dumps(self._data, default=str)
+    
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({self._data})"
+
+
+{% for type_name, type_info in types.items() %}
+class {{ type_name | to_pascal_case }}(BaseModel):
+    """{{ type_info.description or type_name + ' model' }}"""
+    
+    def __init__(self, data: Dict[str, Any]):
+        """Initialize {{ type_name }} from API response data"""
+        super().__init__(data)
+    
+    {% if type_info.properties %}
+    # Property accessors for better IDE support
+    {% for prop_name, prop_info in type_info.properties.items() %}
+    @property
+    def {{ prop_name | to_snake_case }}(self) -> {% if prop_info.type == 'integer' %}Optional[int]{% elif prop_info.type == 'boolean' %}Optional[bool]{% elif prop_info.type == 'array' %}Optional[List[Any]]{% else %}Optional[str]{% endif %}:
+        """{{ prop_info.description or prop_name }}"""
+        return self._data.get('{{ prop_name }}')
+    
+    {% endfor %}
+    {% endif %}
+
+{% endfor %}
+
+# Model registry for dynamic model creation
+MODEL_REGISTRY = {
+    {% for type_name in types.keys() %}'{{ type_name }}': {{ type_name | to_pascal_case }},
+    {% endfor %}
+}
+
+
+def create_model(type_name: str, data: Dict[str, Any]) -> BaseModel:
+    """Create appropriate model instance based on type name"""
+    model_class = MODEL_REGISTRY.get(type_name, BaseModel)
+    return model_class(data)

@@ -1,0 +1,103 @@
+from flask import Blueprint, request, jsonify
+from marshmallow import ValidationError
+from app.services.{{ resource_name }}_service import {{ class_name }}Service
+from app.schemas.{{ resource_name }}_schema import {{ class_name }}Schema, {{ class_name }}ListSchema
+
+
+{{ resource_name }}_bp = Blueprint('{{ resource_name }}', __name__)
+{{ resource_name }}_schema = {{ class_name }}Schema()
+{{ resource_name }}_list_schema = {{ class_name }}ListSchema()
+
+
+{% for endpoint in endpoints %}
+{% for method in endpoint.methods %}
+@{{ resource_name }}_bp.route('{{ endpoint.uri | replace('{', '<') | replace('}', '>') | replace('-', '_') }}', methods=['{{ method.method }}'])
+def {{ method.method.lower() }}_{{ resource_name }}{% if '{' in endpoint.uri %}_by_id{% endif %}({% if '{' in endpoint.uri %}{{ endpoint.uri | extract_param }}{% endif %}):
+    """
+    {{ method.description or method.method + ' ' + endpoint.uri }}
+    
+{% if method.method == 'GET' %}
+    Returns: {{ resource_name }} data
+{% elif method.method == 'POST' %}
+    Creates new {{ resource_name }}
+{% elif method.method == 'PUT' %}
+    Updates existing {{ resource_name }}
+{% elif method.method == 'DELETE' %}
+    Deletes {{ resource_name }}
+{% endif %}
+    """
+    try:
+{% if method.method == 'GET' %}
+{% if '{' in endpoint.uri %}
+        # Get single {{ resource_name }} by ID
+        {{ resource_name }} = {{ class_name }}Service.get_by_id({{ endpoint.uri | extract_param }})
+        if not {{ resource_name }}:
+            return jsonify({'error': '{{ class_name }} not found'}), 404
+        
+        return jsonify({{ resource_name }}_schema.dump({{ resource_name }})), 200
+{% else %}
+        # Get all {{ resource_name }} with pagination
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 20, type=int)
+        
+        # Extract query parameters as filters
+        filters = {}
+        for key, value in request.args.items():
+            if key not in ['page', 'per_page']:
+                filters[key] = value
+        
+        result = {{ class_name }}Service.get_all(page=page, per_page=per_page, **filters)
+        return jsonify({{ resource_name }}_list_schema.dump(result)), 200
+{% endif %}
+        
+{% elif method.method == 'POST' %}
+        # Create new {{ resource_name }}
+        if not request.is_json:
+            return jsonify({'error': 'Content-Type must be application/json'}), 400
+        
+        data = {{ resource_name }}_schema.load(request.json)
+        {{ resource_name }} = {{ class_name }}Service.create(data)
+        return jsonify({{ resource_name }}_schema.dump({{ resource_name }})), 201
+        
+{% elif method.method == 'PUT' %}
+        # Update existing {{ resource_name }}
+        if not request.is_json:
+            return jsonify({'error': 'Content-Type must be application/json'}), 400
+        
+        data = {{ resource_name }}_schema.load(request.json, partial=True)
+        
+{% if '{' in endpoint.uri %}
+        {{ resource_name }} = {{ class_name }}Service.update({{ endpoint.uri | extract_param }}, data)
+        if not {{ resource_name }}:
+            return jsonify({'error': '{{ class_name }} not found'}), 404
+        
+        return jsonify({{ resource_name }}_schema.dump({{ resource_name }})), 200
+{% else %}
+        return jsonify({'error': 'PUT method requires resource ID'}), 400
+{% endif %}
+        
+{% elif method.method == 'DELETE' %}
+{% if '{' in endpoint.uri %}
+        # Delete {{ resource_name }}
+        deleted = {{ class_name }}Service.delete({{ endpoint.uri | extract_param }})
+        if not deleted:
+            return jsonify({'error': '{{ class_name }} not found'}), 404
+        
+        return jsonify({'message': '{{ class_name }} deleted successfully'}), 200
+{% else %}
+        return jsonify({'error': 'DELETE method requires resource ID'}), 400
+{% endif %}
+        
+{% else %}
+        # Method not implemented
+        return jsonify({'error': 'Method not implemented'}), 501
+{% endif %}
+        
+    except ValidationError as err:
+        return jsonify({'error': 'Validation error', 'messages': err.messages}), 400
+    except Exception as e:
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+
+
+{% endfor %}
+{% endfor %}

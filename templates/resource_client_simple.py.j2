@@ -1,0 +1,75 @@
+"""
+{{ class_name }} API client for {{ api_name }}
+"""
+from typing import Dict, Any, List, Optional
+from .base_client import BaseClient
+
+
+class {{ class_name }}Client(BaseClient):
+    """Client for {{ resource_name }} resource operations"""
+    
+    def __init__(self, *args, **kwargs):
+        """Initialize {{ class_name }} client"""
+        super().__init__(*args, **kwargs)
+        self.resource_path = "{{ resource_data.uri }}"
+    
+    {% if resource_data.methods %}
+    {% for method in resource_data.methods %}
+    def {{ method.method.lower() }}{% if method.method == 'GET' and '{' in resource_data.uri %}_by_id{% endif %}(self, {% for param in resource_data.path_params %}{{ param }}: str, {% endfor %}data: Optional[Dict[str, Any]] = None, **kwargs) -> {% if method.method == 'DELETE' %}bool{% else %}Dict[str, Any]{% endif %}:
+        """{{ method.description or method.method + ' ' + resource_name }}"""
+        endpoint = self.resource_path
+        {% for param in resource_data.path_params %}
+        endpoint = endpoint.replace('{{ '{' + param.replace('_', '-') + '}' }}', str({{ param }}))
+        {% endfor %}
+        
+        {% if method.method == 'GET' %}
+        return self.get(endpoint, **kwargs)
+        {% elif method.method == 'POST' %}
+        return self.post(endpoint, data=data, **kwargs)
+        {% elif method.method == 'PUT' %}
+        return self.put(endpoint, data=data, **kwargs)
+        {% elif method.method == 'PATCH' %}
+        return self.patch(endpoint, data=data, **kwargs)
+        {% elif method.method == 'DELETE' %}
+        self.delete(endpoint, **kwargs)
+        return True
+        {% endif %}
+    
+    {% endfor %}
+    {% else %}
+    # No specific methods defined, creating basic CRUD operations
+    def get(self, **kwargs) -> Dict[str, Any]:
+        """Get resource"""
+        return super().get(self.resource_path, **kwargs)
+    
+    def post(self, data: Optional[Dict[str, Any]] = None, **kwargs) -> Dict[str, Any]:
+        """Create resource"""
+        return super().post(self.resource_path, data=data, **kwargs)
+    
+    def put(self, data: Optional[Dict[str, Any]] = None, **kwargs) -> Dict[str, Any]:
+        """Update resource"""
+        return super().put(self.resource_path, data=data, **kwargs)
+    
+    def delete(self, **kwargs) -> bool:
+        """Delete resource"""
+        super().delete(self.resource_path, **kwargs)
+        return True
+    {% endif %}
+    
+    def list(self, **kwargs) -> List[Dict[str, Any]]:
+        """List all {{ resource_name }}s"""
+        base_path = "{{ resource_data.uri.split('{')[0].rstrip('/') }}"
+        response = self.get(base_path, **kwargs)
+        if isinstance(response, list):
+            return response
+        return response.get('items', response.get('data', [response]))
+    
+    {% if resource_data.path_params %}
+    def get_by_id(self, {% for param in resource_data.path_params %}{{ param }}: str{% if not loop.last %}, {% endif %}{% endfor %}) -> Dict[str, Any]:
+        """Get {{ resource_name }} by ID"""
+        endpoint = self.resource_path
+        {% for param in resource_data.path_params %}
+        endpoint = endpoint.replace('{{ '{' + param.replace('_', '-') + '}' }}', str({{ param }}))
+        {% endfor %}
+        return self.get(endpoint)
+    {% endif %}
