@@ -1,0 +1,41 @@
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+from flask_cors import CORS
+from flask_jwt_extended import JWTManager
+
+from app.config import config, Config
+from app.extensions.db import db
+from app.errors.handlers import register_error_handlers
+
+
+def create_app(config_name=None):
+    """Application factory pattern"""
+    app = Flask(__name__)
+    
+    # Handle different config input types
+    if config_name is None:
+        config_class = Config
+    elif isinstance(config_name, str):
+        config_class = config.get(config_name, Config)
+    else:
+        config_class = config_name
+    
+    app.config.from_object(config_class)
+    
+    # Initialize extensions
+    db.init_app(app)
+    CORS(app)
+    jwt = JWTManager(app)
+    
+    # Register blueprints
+    from app.api import bp as api_bp
+    app.register_blueprint(api_bp, url_prefix='/api')
+    
+    # Register error handlers
+    register_error_handlers(app)
+    
+    # Create database tables
+    with app.app_context():
+        db.create_all()
+    
+    return app
