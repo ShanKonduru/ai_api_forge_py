@@ -42,11 +42,11 @@ def main():
             """, unsafe_allow_html=True)
         st.markdown("---")
         # Determine current page index based on session state
-        page_options = ["🏠 Home", "📖 About", "🛠️ API Generator", "📚 Documentation"]
+        page_options = ["🏠 Home", "📖 About", "🛠️ API Forge - API Generator", "📚 Documentation"]
         
         # Set default or get from session state
         if 'current_page' not in st.session_state:
-            st.session_state.current_page = "🛠️ API Generator"
+            st.session_state.current_page = "🛠️ API Forge - API Generator"
         
         # Find the index of current page
         try:
@@ -401,13 +401,13 @@ def show_home_page():
     st.markdown("---")
     st.markdown("### Ready to get started?")
     
-    if st.button("🛠️ Go to API Generator", type="primary", use_container_width=True):
-        st.session_state.current_page = "🛠️ API Generator"
+    if st.button("🛠️ Go to API Forge - API Generator", type="primary", use_container_width=True):
+        st.session_state.current_page = "🛠️ API Forge - API Generator"
         st.rerun()
 
 def show_generator_page():
     """Display the main generator interface"""
-    st.title("🛠️ API Generator")
+    st.title("🛠️ API Forge - API Generator")
     st.markdown("Transform your RAML specifications into production-ready Flask REST APIs with Python client libraries")
     
 
